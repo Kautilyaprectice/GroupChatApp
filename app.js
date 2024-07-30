@@ -10,7 +10,9 @@ const userRoutes = require('./routes/user');
 const app = express();
 const PORT = 3000;
 
-app.use(cors());
+app.use(cors({
+    origin: '*'
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true}));
 
