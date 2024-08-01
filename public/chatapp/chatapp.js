@@ -4,6 +4,8 @@ const sendMessageButton = document.getElementById('send-button');
 
 fetchMessages();
 
+setInterval(fetchMessages, 1000);
+
 sendMessageButton.addEventListener('click', sendMessage);
 
 messageInput.addEventListener('keyup', function(event) {
@@ -21,7 +23,7 @@ function fetchMessages() {
     .catch(error => {
       console.error('Error fetching messages:', error);
     });
-}
+};
 
 function displayMessages(messages) {
 
@@ -40,7 +42,7 @@ function displayMessages(messages) {
     chatArea.appendChild(messageElement);
   });
   chatArea.scrollTop = chatArea.scrollHeight;
-}
+};
 
 
 function sendMessage() {
@@ -57,4 +59,4 @@ function sendMessage() {
         console.error('Error sending message:', error);
       });
   }
-}
+};
