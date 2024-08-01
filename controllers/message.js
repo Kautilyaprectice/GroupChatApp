@@ -20,12 +20,7 @@ exports.getAllMessages = async (req, res, next) => {
 exports.createMessage = async (req, res, next) => {
     const { content } = req.body;
     const userId = req.user.id;
-
-    if (typeof content !== 'string' || content.length === 0) {
-        return res.status(400).json({ message: 'Content must be a non-empty string' });
-    }
     
-
     try{
         const messageContent = await Message.create({ content, userId});
         res.status(201).json(messageContent);

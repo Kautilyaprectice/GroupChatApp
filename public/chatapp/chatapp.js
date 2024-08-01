@@ -30,10 +30,13 @@ function displayMessages(messages) {
   
   messages.forEach(message => {
     const messageElement = document.createElement('div');
-    const messageClass = message.user.id == currentUserId ? 'you' : 'other';
+    const senderName = message.user.name;
+    const messageContent = message.content;
     
+    messageElement.textContent = `${senderName}: ${messageContent}`;
+    messageElement.textContent = `${senderName}: ${messageContent}`;
+    const messageClass = message.user.id == currentUserId ? 'you' : 'other';
     messageElement.classList.add('message', messageClass);
-    messageElement.textContent = message.content;
     chatArea.appendChild(messageElement);
   });
   chatArea.scrollTop = chatArea.scrollHeight;
