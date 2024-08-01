@@ -38,7 +38,8 @@ exports.loginUser = async (req, res, next) => {
             return res.status(401).json({ success: false, message: 'incorrect password' });
         }
 
-        res.status(200).json({ message: 'Login successful', token: generateAccessTocken(user.id) });
+        res.status(200).json({ message: 'Login successful', token: generateAccessTocken(user.id), userId: user.id });
+        
     }catch(err){
         res.status(500).json({ error: err.message });
     }

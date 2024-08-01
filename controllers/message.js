@@ -1,15 +1,27 @@
 const User = require("../models/user");
 const Message = require("../models/message");
+const Sequelize = require('sequelize');
 
 exports.getAllMessages = async (req, res, next) => {
     try{
-        const messages = await Message.findAll({
+        const lastMessageId = req.query.lastMessageId;
+        const queryOptions = {
             include: {
                 model: User,
                 attributes: ['id', 'name']
             },
             order: [['createdAt', 'ASC']]
-        });
+        };
+
+        if(lastMessageId){
+            queryOptions.where = {
+                id: {
+                    [Sequelize.gt]: lastMessageId
+                }
+            };
+        }
+
+        const messages = await Message.findAll(queryOptions)
         res.status(200).json(messages);
     }catch(err){
         console.error('Error fetching messages:', err);

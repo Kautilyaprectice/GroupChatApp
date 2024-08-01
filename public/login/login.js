@@ -15,6 +15,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
                 if (res.status === 200) {
                     alert("Login Successful");
                     localStorage.setItem('token', res.data.token);
+                    localStorage.setItem('userId', res.data.userId);
                     window.location.href = "../chatapp/chatapp.html";
                 }
             })
