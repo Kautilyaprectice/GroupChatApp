@@ -67,6 +67,7 @@ function createGroup() {
             .then(response => {
                 groupNameInput.value = '';
                 loadGroups();
+                location.reload();
             })
             .catch(error => {
                 console.error('Error creating group:', error);
@@ -90,7 +91,7 @@ function fetchMessages() {
         .catch(error => {
             console.error('Error fetching messages:', error);
         });
-};  
+};
 
 function appendMessages(messages) {
     chatArea.innerHTML = ''; 
@@ -129,7 +130,6 @@ function appendMessages(messages) {
     chatArea.scrollTop = chatArea.scrollHeight;
 };
 
-
 function displayMessages(messages) {
     chatArea.innerHTML = '';
     const currentUserId = localStorage.getItem('userId');
@@ -162,7 +162,8 @@ function sendMessage() {
                 if (newMessage && newMessage.user && newMessage.user.name) { 
                     messageInput.value = '';
                     saveMessagesToLocalStorage([newMessage]);
-                    appendMessages([newMessage]); 
+                    fetchMessages(); 
+                    location.reload();
                 } else {
                     console.error('Invalid message format:', newMessage);
                 }
@@ -171,7 +172,7 @@ function sendMessage() {
                 console.error('Error sending message:', error);
             });
     }
-}; 
+};
 
 function loadMessagesFromLocalStorage() {
     let storedMessages = [];
@@ -196,4 +197,4 @@ function saveMessagesToLocalStorage(newMessages) {
     const uniqueNewMessages = newMessages.filter(m => !messageIds.has(m.id));
     const updatedMessages = [...storedMessages, ...uniqueNewMessages].slice(-10);
     localStorage.setItem('messages', JSON.stringify(updatedMessages));
-};
+}
