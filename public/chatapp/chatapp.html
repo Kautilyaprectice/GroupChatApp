@@ -9,14 +9,32 @@
 <body>
     <h1>Chat App</h1>
     <hr>
-    <div class="chat-container">
-        <div class="chat-area">
+    <div class="container">
+        <div class="sidebar">
+            <div class="group-creation">
+                <input type="text" id="groupName" placeholder="Group Name">
+                <br><br>
+                <button id="createGroupButton">Create Group</button>
+            </div>
+            <div class="group-invite">
+                <input type="text" id="inviteUserId" placeholder="User ID to Invite">
+                <br><br>
+                <button id="inviteUserButton">Invite User</button>
+            </div>
+            <div class="group-container">
+                <div id="groupList"></div>
+            </div>
         </div>
-    </div>
-    <br><br>
-    <div class="input-area">
-        <input type="text" id="message-input" placeholder="Type your message">
-        <button id="send-button">Send</button>
+        <div class="main-container">
+            <div class="chat-container">
+                <div class="chat-area"></div>
+            </div>
+            <br><br>
+            <div class="input-area">
+                <input type="text" id="message-input" placeholder="Type your message">
+                <button id="send-button">Send</button>
+            </div>
+        </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="chatapp.js"></script>
