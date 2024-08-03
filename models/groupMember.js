@@ -11,6 +11,9 @@ const GroupMember = sequelize.define('groupmember', {
     role: {
         type: Sequelize.STRING,
         allowNull: false,
+        validate: {
+            isIn: [['admin', 'member']]
+        }
     }
 });
 

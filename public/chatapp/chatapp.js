@@ -1,16 +1,19 @@
-const chatArea = document.querySelector('.chat-area');
-const messageInput = document.getElementById('message-input');
-const sendMessageButton = document.getElementById('send-button');
-const groupList = document.getElementById('groupList');
-const createGroupButton = document.getElementById('createGroupButton');
-const groupNameInput = document.getElementById('groupName');
-
-let lastMessageId = null;
-let selectedGroupId = localStorage.getItem('selectedGroupId') || null;
-
 document.addEventListener('DOMContentLoaded', () => {
+    const chatArea = document.querySelector('.chat-area');
+    const messageInput = document.getElementById('message-input');
+    const sendMessageButton = document.getElementById('send-button');
+    const groupList = document.getElementById('groupList');
+    const createGroupButton = document.getElementById('createGroupButton');
+    const groupNameInput = document.getElementById('groupName');
+    const groupActions = document.getElementById('groupActions');
+    const inviteUserButton = document.getElementById('inviteButton'); 
+    const makeAdminButton = document.getElementById('promoteButton'); 
+    const removeUserButton = document.getElementById('removeButton');  
+
+    let selectedGroupId = localStorage.getItem('selectedGroupId') || null;
+
+    setupGroupActionButtons();
     loadGroups();
-    loadMessagesFromLocalStorage();
     if (selectedGroupId) {
         fetchMessages();
     }
@@ -19,182 +22,229 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchMessages();
         }
     }, 1000);
-});
 
-sendMessageButton.addEventListener('click', sendMessage);
+    sendMessageButton.addEventListener('click', sendMessage);
 
-messageInput.addEventListener('keyup', function(event) {
-    if (event.key === 'Enter') {
-        sendMessage();
-    }
-});
-
-createGroupButton.addEventListener('click', createGroup);
-
-function loadGroups() {
-    const token = localStorage.getItem('token');
-    axios.get('http://localhost:3000/groups', { headers: { 'authorization': token } })
-        .then(response => {
-            const groups = response.data;
-            displayGroups(groups);
-        })
-        .catch(error => {
-            console.error('Error fetching groups:', error);
-        });
-};
-
-function displayGroups(groups) {
-    groupList.innerHTML = '';
-    groups.forEach(group => {
-        const groupElement = document.createElement('div');
-        groupElement.textContent = group.name;
-        groupElement.dataset.groupId = group.id;
-        groupElement.classList.add('group-item');
-        groupElement.addEventListener('click', () => {
-            selectedGroupId = group.id;
-            localStorage.setItem('selectedGroupId', selectedGroupId); 
-            fetchMessages();
-        });
-        groupList.appendChild(groupElement);
+    messageInput.addEventListener('keyup', function(event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
     });
-};
 
-function createGroup() {
-    const groupName = groupNameInput.value.trim();
-    if (groupName) {
+    createGroupButton.addEventListener('click', createGroup);
+
+    function setupGroupActionButtons() {
+        inviteUserButton.textContent = "Invite User";
+        inviteUserButton.addEventListener('click', inviteUser);
+
+        makeAdminButton.textContent = "Make Admin";
+        makeAdminButton.addEventListener('click', promoteUser);
+
+        removeUserButton.textContent = "Remove User";
+        removeUserButton.addEventListener('click', removeUser);
+    }
+
+    function getAuthToken() {
         const token = localStorage.getItem('token');
-        axios.post('http://localhost:3000/groups/create', { name: groupName }, { headers: { 'authorization': token } })
+        if (!token) {
+            console.error('No token found in localStorage');
+        }
+        return token;
+    }
+
+    function loadGroups() {
+        const token = getAuthToken();
+        if (!token) return;
+
+        axios.get('http://localhost:3000/groups', { headers: { 'authorization': token } })
             .then(response => {
-                groupNameInput.value = '';
-                loadGroups();
-                location.reload();
+                const groups = response.data;
+                displayGroups(groups);
             })
             .catch(error => {
-                console.error('Error creating group:', error);
+                console.error('Error fetching groups:', error);
             });
     }
-};
 
-function fetchMessages() {
-    if (!selectedGroupId) return;
-  
-    const token = localStorage.getItem('token');
-    axios.get(`http://localhost:3000/groups/${selectedGroupId}/messages`, { headers: { 'authorization': token }, params: { lastMessageId } })
-        .then(response => {
-            const newMessages = response.data;
-            if (Array.isArray(newMessages) && newMessages.length > 0) {
-                lastMessageId = newMessages[newMessages.length - 1].id;
-                saveMessagesToLocalStorage(newMessages);
-                appendMessages(newMessages);
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching messages:', error);
+    function displayGroups(groups) {
+        groupList.innerHTML = '';
+        groups.forEach(group => {
+            const groupElement = document.createElement('div');
+            groupElement.classList.add('group-container');
+
+            const groupButton = document.createElement('button');
+            groupButton.textContent = group.name;
+            groupButton.dataset.groupId = group.id;
+            groupButton.classList.add('group-item');
+
+            groupButton.addEventListener('click', () => {
+                selectedGroupId = group.id;
+                localStorage.setItem('selectedGroupId', selectedGroupId);
+                fetchMessages();
+                showGroupActions(group.id, group.role);
+            });
+
+            groupElement.appendChild(groupButton);
+
+            groupList.appendChild(groupElement);
         });
-};
+    }
 
-function appendMessages(messages) {
-    chatArea.innerHTML = ''; 
-
-    messages.forEach(message => {
-        if (message && message.user && message.user.name) {
-            const existingMessages = Array.from(chatArea.getElementsByClassName('message'));
-            const isDuplicate = existingMessages.some(existingMessage => 
-                existingMessage.dataset.messageId === message.id.toString()
-            );
-
-            if (!isDuplicate) {
-                const messageElement = document.createElement('div');
-                messageElement.classList.add('message');
-                messageElement.dataset.messageId = message.id; 
-                messageElement.textContent = `${message.user.name}: ${message.content}`;
-                chatArea.appendChild(messageElement);
-            }
-        } else if (message && message.userId) {
-            const existingMessages = Array.from(chatArea.getElementsByClassName('message'));
-            const isDuplicate = existingMessages.some(existingMessage => 
-                existingMessage.dataset.messageId === message.id.toString()
-            );
-
-            if (!isDuplicate) {
-                const messageElement = document.createElement('div');
-                messageElement.classList.add('message');
-                messageElement.dataset.messageId = message.id; 
-                messageElement.textContent = `User ${message.userId}: ${message.content}`;
-                chatArea.appendChild(messageElement);
-            }
-        } else {
-            console.error('Message or user information is missing:', message);
-        }
-    });
-    chatArea.scrollTop = chatArea.scrollHeight;
-};
-
-function displayMessages(messages) {
-    chatArea.innerHTML = '';
-    const currentUserId = localStorage.getItem('userId');
-
-    messages.forEach(message => {
-        if (message && message.user && message.user.name && message.content) {
-            const messageElement = document.createElement('div');
-            const senderName = message.userId === parseInt(currentUserId, 10) ? 'you' : message.user.name;
-            const messageContent = message.content;
-
-            messageElement.textContent = `${senderName}: ${messageContent}`;
-            const messageClass = message.userId === parseInt(currentUserId, 10) ? 'you' : 'other';
-            messageElement.classList.add('message', messageClass);
-            chatArea.appendChild(messageElement);
-        } else {
-            console.error('Invalid message format:', message);
-        }
-    });
-    chatArea.scrollTop = chatArea.scrollHeight;
-};
-
-function sendMessage() {
-    const messageText = messageInput.value.trim();
-  
-    if (messageText !== '' && selectedGroupId) {
-        const token = localStorage.getItem('token');
-        axios.post(`http://localhost:3000/groups/${selectedGroupId}/messages`, { content: messageText }, { headers: { 'authorization': token } })
+    function showGroupActions(groupId) {
+        const token = getAuthToken();
+        if (!token || !selectedGroupId) return;
+    
+        axios.get(`http://localhost:3000/groups/${selectedGroupId}/role`, { headers: { 'authorization': token } })
             .then(response => {
-                const newMessage = response.data;
-                if (newMessage && newMessage.user && newMessage.user.name) { 
-                    messageInput.value = '';
-                    saveMessagesToLocalStorage([newMessage]);
-                    fetchMessages(); 
-                    location.reload();
+                const role = response.data.role;
+                if (role === 'admin') {
+                    groupActions.style.display = 'block';
+    
+                    // Update IDs with groupId
+                    document.getElementById('inviteUserId').id = `inviteUserId-${groupId}`;
+                    document.getElementById('promoteUserId').id = `promoteUserId-${groupId}`;
                 } else {
-                    console.error('Invalid message format:', newMessage);
+                    groupActions.style.display = 'none';
                 }
+            })
+            .catch(error => {
+                console.error('Error fetching user role:', error);
+                groupActions.style.display = 'none';
+            });
+    }    
+
+    function hideGroupActions() {
+        groupActions.style.display = 'none';
+    }
+
+    function sendMessage() {
+        const content = messageInput.value;
+        const token = getAuthToken();
+        if (!token || !content || !selectedGroupId) return;
+
+        axios.post(`http://localhost:3000/groups/${selectedGroupId}/messages`, { content }, { headers: { 'authorization': token } })
+            .then(response => {
+                messageInput.value = '';
+                fetchMessages();
             })
             .catch(error => {
                 console.error('Error sending message:', error);
             });
     }
-};
 
-function loadMessagesFromLocalStorage() {
-    let storedMessages = [];
-    try {
-        storedMessages = JSON.parse(localStorage.getItem('messages')) || [];
-    } catch (e) {
-        console.error('Failed to parse messages from localStorage:', e);
-        localStorage.removeItem('messages');
+    function fetchMessages() {
+        const token = getAuthToken();
+        if (!token || !selectedGroupId) return;
+    
+        axios.get(`http://localhost:3000/groups/${selectedGroupId}/messages`, { headers: { 'authorization': token } })
+            .then(response => {
+                const messages = response.data;
+                displayMessages(messages);
+                saveMessagesToLocalStorage(messages);
+            })
+            .catch(error => {
+                if (error.response && error.response.status === 403) {
+                    console.error('User is not a member of this group');
+                    chatArea.innerHTML = '<p>You are not a member of this group.</p>';
+                } else {
+                    console.error('Error fetching messages:', error);
+                }
+            });
+    }
+
+    function displayMessages(messages) {
+        chatArea.innerHTML = '';
+        const currentUserId = localStorage.getItem('userId');
+
+        messages.forEach(message => {
+            if (message && message.user && message.user.name && message.content) {
+                const messageElement = document.createElement('div');
+                const senderName = message.userId === parseInt(currentUserId, 10) ? 'you' : message.user.name;
+                const messageContent = message.content;
+    
+                messageElement.textContent = `${senderName}: ${messageContent}`;
+                const messageClass = message.userId === parseInt(currentUserId, 10) ? 'you' : 'other';
+                messageElement.classList.add('message', messageClass);
+                chatArea.appendChild(messageElement);
+            } else {
+                console.error('Invalid message format:', message);
+            }
+        });
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function createGroup() {
+        const groupName = groupNameInput.value;
+        const token = getAuthToken();
+        if (!token || !groupName) return;
+
+        axios.post('http://localhost:3000/groups', { name: groupName }, { headers: { 'authorization': token } })
+            .then(response => {
+                console.log('Group created:', response.data);
+                loadGroups(); 
+                groupNameInput.value = ''; 
+            })
+            .catch(error => {
+                console.error('Error creating group:', error);
+            });
+    }
+
+    function inviteUser() {
+        const groupId = localStorage.getItem('selectedGroupId');
+        const userId = document.getElementById(`inviteUserId-${groupId}`)?.value;
+        const token = getAuthToken();
+        if (!token || !userId) {
+            console.error('Missing required fields: token or userId');
+            return;
+        }
+    
+        axios.post('http://localhost:3000/groups/invite', { groupId, userId }, { headers: { 'authorization': token } })
+            .then(response => {
+                console.log('User invited:', response.data);
+                document.getElementById(`inviteUserId-${groupId}`).value = ''; 
+            })
+            .catch(error => {
+                console.error('Error inviting user:', error.response ? error.response.data : error.message);
+            });
     }
     
-    if (storedMessages.length > 0) {
-        lastMessageId = storedMessages[storedMessages.length - 1].id;
-        chatArea.innerHTML = ''; 
-        displayMessages(storedMessages);
-    }
-};
-
-function saveMessagesToLocalStorage(newMessages) {
-    let storedMessages = JSON.parse(localStorage.getItem('messages')) || [];
+    function promoteUser() {
+        const groupId = localStorage.getItem('selectedGroupId');
+        const userId = document.getElementById(`promoteUserId-${groupId}`)?.value;
+        const token = getAuthToken();
+        if (!token || !userId) return;
     
-    const messageIds = new Set(storedMessages.map(m => m.id));
-    const uniqueNewMessages = newMessages.filter(m => !messageIds.has(m.id));
-    const updatedMessages = [...storedMessages, ...uniqueNewMessages].slice(-10);
-    localStorage.setItem('messages', JSON.stringify(updatedMessages));
-}
+        axios.post('http://localhost:3000/groups/promote', { groupId, userId }, { headers: { 'authorization': token } })
+            .then(response => {
+                console.log('User promoted:', response.data);
+                document.getElementById(`promoteUserId-${groupId}`).value = ''; 
+            })
+            .catch(error => {
+                console.error('Error promoting user:', error);
+            });
+    }
+    
+    function removeUser() {
+        const groupId = localStorage.getItem('selectedGroupId');
+        const userId = document.getElementById(`promoteUserId-${groupId}`)?.value;
+        const token = getAuthToken();
+        if (!token || !userId) return;
+    
+        axios.post('http://localhost:3000/groups/remove', { groupId, userId }, { headers: { 'authorization': token } })
+            .then(response => {
+                console.log('User removed:', response.data);
+                document.getElementById(`promoteUserId-${groupId}`).value = ''; 
+            })
+            .catch(error => {
+                console.error('Error removing user:', error);
+            });
+    }    
+
+    function saveMessagesToLocalStorage(messages) {
+        if (!Array.isArray(messages)) {
+            console.error('Invalid messages data:', messages);
+            return;
+        }
+        localStorage.setItem('messages', JSON.stringify(messages));
+    }
+});

@@ -1,6 +1,7 @@
 const User = require("../models/user");
 const Message = require("../models/message");
 const Sequelize = require('sequelize');
+const Group = require("../models/group");
 
 exports.getAllMessages = async (req, res, next) => {
     try {
@@ -28,9 +29,13 @@ exports.getAllMessages = async (req, res, next) => {
 };
 
 exports.createMessage = async (req, res, next) => {
-    const { content } = req.body;
+    const { content } = req.body; // Ensure this matches the client request
     const userId = req.user.id;
-    const groupId = req.params.groupId; 
+    const groupId = req.params.groupId;
+
+    console.log('Request body:', req.body); // Log the request body
+    console.log('User ID:', userId); // Log the user ID
+    console.log('Group ID:', groupId); // Log the group ID
 
     try {
         const messageContent = await Message.create({ content, userId, groupId });

@@ -16,13 +16,14 @@
                 <br><br>
                 <button id="createGroupButton">Create Group</button>
             </div>
-            <div class="group-invite">
-                <input type="text" id="inviteUserId" placeholder="User ID to Invite">
-                <br><br>
-                <button id="inviteUserButton">Invite User</button>
-            </div>
-            <div class="group-container">
-                <div id="groupList"></div>
+            <div id="groupList"></div>
+            <div id="groupActions" style="display: none;">
+                <input type="text" id="inviteUserId" placeholder="User ID to invite" />
+                <button id="inviteButton">Invite User</button>
+                <input type="text" id="promoteUserId" placeholder="User ID to manage" />
+                <button id="promoteButton">Make Admin</button>
+                <button id="removeButton">Remove User</button>
+
             </div>
         </div>
         <div class="main-container">
