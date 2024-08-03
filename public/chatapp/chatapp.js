@@ -100,7 +100,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (role === 'admin') {
                     groupActions.style.display = 'block';
     
-                    // Update IDs with groupId
                     document.getElementById('inviteUserId').id = `inviteUserId-${groupId}`;
                     document.getElementById('promoteUserId').id = `promoteUserId-${groupId}`;
                 } else {
