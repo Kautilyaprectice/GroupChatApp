@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedGroupId = group.id;
                 localStorage.setItem('selectedGroupId', selectedGroupId);
                 joinGroup(selectedGroupId);
-                showGroupActions(group.id, group.role);
+                showGroupActions(group.id);
             });
 
             groupElement.appendChild(groupButton);
@@ -101,8 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const role = response.data.role;
                 if (role === 'admin') {
                     groupActions.style.display = 'block';
-                    document.getElementById('inviteUserId').id = `inviteUserId-${groupId}`;
-                    document.getElementById('promoteUserId').id = `promoteUserId-${groupId}`;
+                    document.getElementById('inviteUserId').dataset.groupId = groupId;
+                    document.getElementById('promoteUserId').dataset.groupId = groupId;
+                    document.getElementById('removeUserId').dataset.groupId = groupId;
                 } else {
                     groupActions.style.display = 'none';
                 }
@@ -120,13 +121,17 @@ document.addEventListener('DOMContentLoaded', () => {
     function sendMessage() {
         const content = messageInput.value;
         const token = getAuthToken();
+        const userId = localStorage.getItem('userId');
+        
         if (!token || !content || !selectedGroupId) return;
-
-        socket.emit('sendMessage', { groupId: selectedGroupId, userId: localStorage.getItem('userId'), content });
+    
+        const message = { groupId: selectedGroupId, userId, content };
+        displayMessages([message]);
         messageInput.value = '';
-
+        socket.emit('sendMessage', message);
         fetchMessages();
     }
+    
 
     function joinGroup(groupId) {
         socket.emit('joinGroup', { groupId });
@@ -179,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const token = getAuthToken();
         if (!token || !groupName) return;
 
-        axios.post('http://localhost:3000/groups', { name: groupName }, { headers: { 'authorization': token } })
+        axios.post('http://localhost:3000/groups/create', { name: groupName }, { headers: { 'authorization': token } })
             .then(response => {
                 console.log('Group created:', response.data);
                 loadGroups();
@@ -191,18 +196,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function inviteUser() {
-        const groupId = localStorage.getItem('selectedGroupId');
-        const userId = document.getElementById(`inviteUserId-${groupId}`)?.value;
+        const groupId = selectedGroupId;
+        const userId = document.getElementById('inviteUserId').value;
         const token = getAuthToken();
-        if (!token || !userId) {
-            console.error('Missing required fields: token or userId');
+        if (!token || !userId || !groupId) {
+            console.error('Missing required fields: token, userId, or groupId');
             return;
         }
-
+    
         axios.post('http://localhost:3000/groups/invite', { groupId, userId }, { headers: { 'authorization': token } })
             .then(response => {
                 console.log('User invited:', response.data);
-                document.getElementById(`inviteUserId-${groupId}`).value = '';
+                document.getElementById('inviteUserId').value = '';
             })
             .catch(error => {
                 console.error('Error inviting user:', error.response ? error.response.data : error.message);
@@ -210,36 +215,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function promoteUser() {
-        const groupId = localStorage.getItem('selectedGroupId');
-        const userId = document.getElementById(`promoteUserId-${groupId}`)?.value;
+        const groupId = selectedGroupId;
+        const userId = document.getElementById('promoteUserId').value;
         const token = getAuthToken();
-        if (!token || !userId) return;
-
+    
+        if (!token || !userId || !groupId) {
+            console.error('Missing required fields: token, userId, or groupId');
+            return;
+        }
+    
         axios.post('http://localhost:3000/groups/promote', { groupId, userId }, { headers: { 'authorization': token } })
             .then(response => {
                 console.log('User promoted:', response.data);
-                document.getElementById(`promoteUserId-${groupId}`).value = '';
+                document.getElementById('promoteUserId').value = '';
             })
             .catch(error => {
-                console.error('Error promoting user:', error);
+                console.error('Error promoting user:', error.response ? error.response.data : error.message);
             });
-    }
+    }    
 
     function removeUser() {
-        const groupId = localStorage.getItem('selectedGroupId');
-        const userId = document.getElementById(`promoteUserId-${groupId}`)?.value;
+        const groupId = selectedGroupId;
+        const userId = document.getElementById('removeUserId').value;
         const token = getAuthToken();
-        if (!token || !userId) return;
-
+    
+        if (!token || !userId || !groupId) {
+            console.error('Missing required fields: token, userId, or groupId');
+            return;
+        }
+    
         axios.post('http://localhost:3000/groups/remove', { groupId, userId }, { headers: { 'authorization': token } })
             .then(response => {
                 console.log('User removed:', response.data);
-                document.getElementById(`promoteUserId-${groupId}`).value = '';
+                document.getElementById('removeUserId').value = '';
             })
             .catch(error => {
-                console.error('Error removing user:', error);
+                console.error('Error removing user:', error.response ? error.response.data : error.message);
             });
     }
+    
 
     function saveMessagesToLocalStorage(messages) {
         if (!Array.isArray(messages)) {
