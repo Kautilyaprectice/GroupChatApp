@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const socket = io('http://localhost:3000');
     const chatArea = document.querySelector('.chat-area');
     const messageInput = document.getElementById('message-input');
     const sendMessageButton = document.getElementById('send-button');
@@ -6,22 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const createGroupButton = document.getElementById('createGroupButton');
     const groupNameInput = document.getElementById('groupName');
     const groupActions = document.getElementById('groupActions');
-    const inviteUserButton = document.getElementById('inviteButton'); 
-    const makeAdminButton = document.getElementById('promoteButton'); 
-    const removeUserButton = document.getElementById('removeButton');  
+    const inviteUserButton = document.getElementById('inviteButton');
+    const makeAdminButton = document.getElementById('promoteButton');
+    const removeUserButton = document.getElementById('removeButton');
 
     let selectedGroupId = localStorage.getItem('selectedGroupId') || null;
 
     setupGroupActionButtons();
     loadGroups();
     if (selectedGroupId) {
-        fetchMessages();
+        joinGroup(selectedGroupId);
     }
-    setInterval(() => {
-        if (selectedGroupId) {
-            fetchMessages();
-        }
-    }, 1000);
 
     sendMessageButton.addEventListener('click', sendMessage);
 
@@ -32,6 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     createGroupButton.addEventListener('click', createGroup);
+
+    socket.on('receiveMessage', message => {
+        if (message.groupId === selectedGroupId) {
+            displayMessages([message]);
+        }
+    });
 
     function setupGroupActionButtons() {
         inviteUserButton.textContent = "Invite User";
@@ -80,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
             groupButton.addEventListener('click', () => {
                 selectedGroupId = group.id;
                 localStorage.setItem('selectedGroupId', selectedGroupId);
-                fetchMessages();
+                joinGroup(selectedGroupId);
                 showGroupActions(group.id, group.role);
             });
 
@@ -93,13 +95,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function showGroupActions(groupId) {
         const token = getAuthToken();
         if (!token || !selectedGroupId) return;
-    
+
         axios.get(`http://localhost:3000/groups/${selectedGroupId}/role`, { headers: { 'authorization': token } })
             .then(response => {
                 const role = response.data.role;
                 if (role === 'admin') {
                     groupActions.style.display = 'block';
-    
                     document.getElementById('inviteUserId').id = `inviteUserId-${groupId}`;
                     document.getElementById('promoteUserId').id = `promoteUserId-${groupId}`;
                 } else {
@@ -110,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Error fetching user role:', error);
                 groupActions.style.display = 'none';
             });
-    }    
+    }
 
     function hideGroupActions() {
         groupActions.style.display = 'none';
@@ -121,20 +122,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const token = getAuthToken();
         if (!token || !content || !selectedGroupId) return;
 
-        axios.post(`http://localhost:3000/groups/${selectedGroupId}/messages`, { content }, { headers: { 'authorization': token } })
-            .then(response => {
-                messageInput.value = '';
-                fetchMessages();
-            })
-            .catch(error => {
-                console.error('Error sending message:', error);
-            });
+        socket.emit('sendMessage', { groupId: selectedGroupId, userId: localStorage.getItem('userId'), content });
+        messageInput.value = '';
+
+        fetchMessages();
+    }
+
+    function joinGroup(groupId) {
+        socket.emit('joinGroup', { groupId });
+        fetchMessages();
     }
 
     function fetchMessages() {
         const token = getAuthToken();
         if (!token || !selectedGroupId) return;
-    
+
         axios.get(`http://localhost:3000/groups/${selectedGroupId}/messages`, { headers: { 'authorization': token } })
             .then(response => {
                 const messages = response.data;
@@ -160,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const messageElement = document.createElement('div');
                 const senderName = message.userId === parseInt(currentUserId, 10) ? 'you' : message.user.name;
                 const messageContent = message.content;
-    
+
                 messageElement.textContent = `${senderName}: ${messageContent}`;
                 const messageClass = message.userId === parseInt(currentUserId, 10) ? 'you' : 'other';
                 messageElement.classList.add('message', messageClass);
@@ -180,8 +182,8 @@ document.addEventListener('DOMContentLoaded', () => {
         axios.post('http://localhost:3000/groups', { name: groupName }, { headers: { 'authorization': token } })
             .then(response => {
                 console.log('Group created:', response.data);
-                loadGroups(); 
-                groupNameInput.value = ''; 
+                loadGroups();
+                groupNameInput.value = '';
             })
             .catch(error => {
                 console.error('Error creating group:', error);
@@ -196,48 +198,48 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Missing required fields: token or userId');
             return;
         }
-    
+
         axios.post('http://localhost:3000/groups/invite', { groupId, userId }, { headers: { 'authorization': token } })
             .then(response => {
                 console.log('User invited:', response.data);
-                document.getElementById(`inviteUserId-${groupId}`).value = ''; 
+                document.getElementById(`inviteUserId-${groupId}`).value = '';
             })
             .catch(error => {
                 console.error('Error inviting user:', error.response ? error.response.data : error.message);
             });
     }
-    
+
     function promoteUser() {
         const groupId = localStorage.getItem('selectedGroupId');
         const userId = document.getElementById(`promoteUserId-${groupId}`)?.value;
         const token = getAuthToken();
         if (!token || !userId) return;
-    
+
         axios.post('http://localhost:3000/groups/promote', { groupId, userId }, { headers: { 'authorization': token } })
             .then(response => {
                 console.log('User promoted:', response.data);
-                document.getElementById(`promoteUserId-${groupId}`).value = ''; 
+                document.getElementById(`promoteUserId-${groupId}`).value = '';
             })
             .catch(error => {
                 console.error('Error promoting user:', error);
             });
     }
-    
+
     function removeUser() {
         const groupId = localStorage.getItem('selectedGroupId');
         const userId = document.getElementById(`promoteUserId-${groupId}`)?.value;
         const token = getAuthToken();
         if (!token || !userId) return;
-    
+
         axios.post('http://localhost:3000/groups/remove', { groupId, userId }, { headers: { 'authorization': token } })
             .then(response => {
                 console.log('User removed:', response.data);
-                document.getElementById(`promoteUserId-${groupId}`).value = ''; 
+                document.getElementById(`promoteUserId-${groupId}`).value = '';
             })
             .catch(error => {
                 console.error('Error removing user:', error);
             });
-    }    
+    }
 
     function saveMessagesToLocalStorage(messages) {
         if (!Array.isArray(messages)) {
@@ -246,4 +248,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         localStorage.setItem('messages', JSON.stringify(messages));
     }
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            fetchMessages();
+        }
+    });
+
+    let messageFetchInterval = null;
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            fetchMessages();
+            messageFetchInterval = setInterval(fetchMessages, 5000);
+        } else {
+            clearInterval(messageFetchInterval);
+        }
+    });
+
+    messageFetchInterval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            fetchMessages();
+        }
+    }, 5000);
 });
