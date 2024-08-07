@@ -10,6 +10,7 @@ const User = require('./models/user');
 const Message = require('./models/message');
 const Group = require('./models/group');
 const GroupMember = require('./models/groupMember');
+const archievedChats = require('./models/archievedChats');
 
 const userRoutes = require('./routes/user');
 const messageRoutes = require('./routes/message');
@@ -47,6 +48,12 @@ Message.belongsTo(Group);
 User.hasMany(Message);
 Message.belongsTo(User);
 
+Group.hasMany(archievedChats);
+archievedChats.belongsTo(Group);
+
+User.hasMany(archievedChats);
+archievedChats.belongsTo(User);
+
 io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
 
@@ -78,6 +85,8 @@ io.on('connection', (socket) => {
         console.log('Client disconnected:', socket.id);
     });
 });
+
+require('./script/archieveOldMessages');
 
 sequelize.sync()
     .then(() => {

@@ -39,10 +39,16 @@ document.addEventListener('DOMContentLoaded', () => {
     uploadFileButton.addEventListener('click', uploadFile);
 
     socket.on('receiveMessage', message => {
+        console.log('Received message:', message); // Log the entire message object
         if (message.groupId === selectedGroupId) {
-            displayMessages([message]);
+            if (!message.user || !message.user.name) {
+                console.error('Invalid message structure:', message);
+            } else {
+                displayMessages([message]);
+            }
         }
     });
+    
 
     function setupGroupActionButtons() {
         inviteUserButton.textContent = "Invite User";
@@ -133,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const userId = localStorage.getItem('userId');
         
         if (!token || !content || !selectedGroupId) return;
-    
+        
         const message = { groupId: selectedGroupId, userId, content };
         displayMessages([message]);
         messageInput.value = '';
@@ -169,14 +175,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayMessages(messages) {
         chatArea.innerHTML = '';
         const currentUserId = localStorage.getItem('userId');
-
+    
         messages.forEach(message => {
-            if (message && message.user && message.user.name && message.content) {
+            console.log('Displaying message:', message);
+    
+            const senderName = message.user && message.user.name ? message.user.name : 'Unknown';
+            const messageContent = message.content;
+    
+            if (messageContent) {
                 const messageElement = document.createElement('div');
-                const senderName = message.userId === parseInt(currentUserId, 10) ? 'you' : message.user.name;
-                const messageContent = message.content;
-
-                messageElement.textContent = `${senderName}: ${messageContent}`;
+                const displayedSenderName = message.userId === parseInt(currentUserId, 10) ? 'you' : senderName;
+    
+                messageElement.textContent = `${displayedSenderName}: ${messageContent}`;
                 const messageClass = message.userId === parseInt(currentUserId, 10) ? 'you' : 'other';
                 messageElement.classList.add('message', messageClass);
                 chatArea.appendChild(messageElement);
@@ -184,8 +194,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Invalid message format:', message);
             }
         });
+    
         chatArea.scrollTop = chatArea.scrollHeight;
-    }
+    }     
 
     function createGroup() {
         const groupName = groupNameInput.value;
