@@ -10,6 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const inviteUserButton = document.getElementById('inviteButton');
     const makeAdminButton = document.getElementById('promoteButton');
     const removeUserButton = document.getElementById('removeButton');
+    const fileInput = document.getElementById('fileInput');
+    const uploadFileButton = document.getElementById('uploadFileButton');
+
+    if (!fileInput || !uploadFileButton) {
+        console.error('File input or upload button not found in the DOM');
+        return;
+    }
 
     let selectedGroupId = localStorage.getItem('selectedGroupId') || null;
 
@@ -28,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     createGroupButton.addEventListener('click', createGroup);
+
+    uploadFileButton.addEventListener('click', uploadFile);
 
     socket.on('receiveMessage', message => {
         if (message.groupId === selectedGroupId) {
@@ -131,7 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
         socket.emit('sendMessage', message);
         fetchMessages();
     }
-    
 
     function joinGroup(groupId) {
         socket.emit('joinGroup', { groupId });
@@ -203,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Missing required fields: token, userId, or groupId');
             return;
         }
-    
+
         axios.post('http://localhost:3000/groups/invite', { groupId, userId }, { headers: { 'authorization': token } })
             .then(response => {
                 console.log('User invited:', response.data);
@@ -218,12 +226,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const groupId = selectedGroupId;
         const userId = document.getElementById('promoteUserId').value;
         const token = getAuthToken();
-    
+
         if (!token || !userId || !groupId) {
             console.error('Missing required fields: token, userId, or groupId');
             return;
         }
-    
+
         axios.post('http://localhost:3000/groups/promote', { groupId, userId }, { headers: { 'authorization': token } })
             .then(response => {
                 console.log('User promoted:', response.data);
@@ -232,18 +240,18 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => {
                 console.error('Error promoting user:', error.response ? error.response.data : error.message);
             });
-    }    
+    }
 
     function removeUser() {
         const groupId = selectedGroupId;
         const userId = document.getElementById('removeUserId').value;
         const token = getAuthToken();
-    
+
         if (!token || !userId || !groupId) {
             console.error('Missing required fields: token, userId, or groupId');
             return;
         }
-    
+
         axios.post('http://localhost:3000/groups/remove', { groupId, userId }, { headers: { 'authorization': token } })
             .then(response => {
                 console.log('User removed:', response.data);
@@ -253,14 +261,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Error removing user:', error.response ? error.response.data : error.message);
             });
     }
-    
 
-    function saveMessagesToLocalStorage(messages) {
-        if (!Array.isArray(messages)) {
-            console.error('Invalid messages data:', messages);
+    function uploadFile() {
+        if (!fileInput.files.length) {
+            console.error('No file selected');
             return;
         }
-        localStorage.setItem('messages', JSON.stringify(messages));
+        
+        const file = fileInput.files[0];
+        const token = getAuthToken();
+        if (!token || !file || !selectedGroupId) return;
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('groupId', selectedGroupId);
+        
+        axios.post('http://localhost:3000/groups/upload', formData, {
+            headers: {
+                'authorization': token,
+                'Content-Type': 'multipart/form-data'
+            }
+        })
+        .then(response => {
+            console.log('File uploaded:', response.data);
+            fileInput.value = ''; 
+        })
+        .catch(error => console.error('Error uploading file:', error.response ? error.response.data : error.message));
+    }    
+
+    function saveMessagesToLocalStorage(messages) {
+        const key = `messages_${selectedGroupId}`;
+        localStorage.setItem(key, JSON.stringify(messages));
     }
 
     document.addEventListener('visibilitychange', () => {

@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+require('dotenv').config();
 
 const sequelize = require('./util/database');
 const User = require('./models/user');
@@ -54,9 +55,13 @@ io.on('connection', (socket) => {
         console.log(`Socket ${socket.id} joined group ${groupId}`);
     });
 
-    socket.on('sendMessage', async ({ groupId, userId, content }) => {
+    socket.on('sendMessage', async ({ groupId, userId, content, type = 'text' }) => {
         try {
-            const message = await Message.create({ groupId, userId, content });
+            const groupMember = await GroupMember.findOne({ where: { groupId, userId } });
+            if (!groupMember) {
+                throw new Error('User is not a member of the group');
+            }
+            const message = await Message.create({ groupId, userId, content, type });
             const fullMessage = await Message.findByPk(message.id, {
                 include: {
                     model: User,
