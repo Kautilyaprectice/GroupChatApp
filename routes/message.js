@@ -4,7 +4,7 @@ const multer = require('multer');
 const messageController = require('../controllers/message');
 const userAuthentication = require('../middleware/authenticate');
 
-const storage = multer.memoryStorage(); // Store file in memory
+const storage = multer.memoryStorage(); 
 const upload = multer({ storage });
 
 router.get('/groups/:groupId/messages', userAuthentication.authenticate, messageController.getAllMessages);

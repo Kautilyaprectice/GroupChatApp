@@ -53,14 +53,14 @@ exports.createMessage = async (req, res, next) => {
 exports.upload = async (req, res, next) => {
     try {
         const groupId = req.body.groupId;
-        const file = req.file; // Ensure this matches the key in FormData
+        const file = req.file; 
         const userId = req.user.id;
 
         if (!file || !groupId) {
             return res.status(400).json({ error: 'File and groupId are required' });
         }
 
-        const fileName = Date.now() + '-' + file.originalname; // Unique file name
+        const fileName = Date.now() + '-' + file.originalname; 
         const fileData = file.buffer;
         const fileUrl = await uploadToS3(fileData, fileName);
 
@@ -81,8 +81,8 @@ exports.upload = async (req, res, next) => {
         res.status(201).json(messageWithUser);
 
     } catch (err) {
-        console.error('Error uploading file:', err); // Log the error for debugging
-        res.status(500).json({ error: `Internal Server Error: ${err.message}` }); // Provide the error message in response
+        console.error('Error uploading file:', err); 
+        res.status(500).json({ error: `Internal Server Error: ${err.message}` }); 
     }
 };
 
